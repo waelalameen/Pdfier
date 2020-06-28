@@ -9,7 +9,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'dart:io' show Directory, File, Platform;
-
 import 'package:sample_pdf/take_picture.dart';
 import 'package:sample_pdf/utils.dart';
 
@@ -105,7 +104,12 @@ class _MaterialHomeState extends State<MaterialHome> {
           pageFormat: PdfPageFormat.a4,
           build: (pw.Context context) {
             return pw.Center(
-              child: pw.Expanded(child: pw.Image(pdfImage))
+              child: pw.Expanded(
+                child: pw.Image(
+                  pdfImage,
+                  fit: pw.BoxFit.cover
+                ),
+              )
             );
           }
         )
@@ -139,9 +143,9 @@ class _MaterialHomeState extends State<MaterialHome> {
         child: FutureBuilder<List<File>>(
           future: loadDocuments(),
           builder: (context, snapshot) {
-            print(snapshot.data.length);
+            var length = snapshot.data != null ? snapshot.data.length : 0;
             if (snapshot.connectionState == ConnectionState.done) {
-              if (snapshot.data.length > 0) {
+              if (length > 0) {
                 return _renderFilesList(snapshot);
               } else {
                 return Center(
@@ -228,12 +232,13 @@ class _MaterialHomeState extends State<MaterialHome> {
                             )
                           ),
                           onTap: () async {
-                            List<File> files = await FilePicker.getMultiFile(
+                            File file = await FilePicker.getFile(
                               type: FileType.custom,
                               allowedExtensions: ['jpg', 'jpeg', 'png']
                             );
+                            List<File> files = List();
+                            files.add(file);
                             convertToPdf(files);
-
                             Navigator.of(context, rootNavigator: true).pop('dialog');
                           },
                         ),

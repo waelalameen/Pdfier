@@ -100,12 +100,22 @@ class DisplayPicture extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
         iconTheme: IconThemeData(
           color: Colors.black87
         ),
+        actions: <Widget>[
+          IconButton(
+            icon: Icon(Icons.add_a_photo), 
+            onPressed: () {
+              
+            }
+          )
+        ],
         title: Text(
           '${imagePath.substring(imagePath.lastIndexOf('/'))}',
           style: TextStyle(
@@ -113,7 +123,11 @@ class DisplayPicture extends StatelessWidget {
           ),
         ),
       ),
-      body: Image.file(File(imagePath)),
+      body: Container(
+        width: size.width,
+        height: size.height,
+        child: Image.file(File(imagePath), fit: BoxFit.fill)
+      ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: Padding(
           padding: const EdgeInsets.only(bottom: 24.0),
@@ -134,7 +148,12 @@ class DisplayPicture extends StatelessWidget {
                     pageFormat: PdfPageFormat.a4,
                     build: (pw.Context context) {
                       return pw.Center(
-                        child: pw.Expanded(child: pw.Image(pdfImage))
+                        child: pw.Expanded(
+                          child: pw.Image(
+                            pdfImage,
+                            fit: pw.BoxFit.cover
+                          )
+                        )
                       );
                     }
                   )
