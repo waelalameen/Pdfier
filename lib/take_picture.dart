@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -6,13 +7,15 @@ import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:permission_handler/permission_handler.dart';
+import 'package:sample_pdf/picture_selector.dart';
 import 'package:sample_pdf/utils.dart';
 
 class TakePicture extends StatefulWidget {
 
   final CameraDescription camera;
 
-  const TakePicture({
+  const TakePicture({     
     Key key,
     @required this.camera
   }) : super(key: key);
@@ -70,23 +73,37 @@ class _TakePictureState extends State<TakePicture> {
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
         floatingActionButton: FloatingActionButton(
           child: Icon(Icons.photo_camera),
+          backgroundColor: accentColor,
           onPressed: () async {
             try {
               await _intializedControllerFuture;
-              final path = join((await getTemporaryDirectory()).path, 'photo_${DateTime.now()}.png');
-              await _controller.takePicture(path);
+              final documentDirectory = await getExternalStorageDirectory();
+              final path = join(documentDirectory.path, 'photo_${DateTime.now()}.png');
+              var status = await Permission.storage.status;
 
-              Navigator.push(
-                context, 
-                MaterialPageRoute(builder: (context) => DisplayPicture(imagePath: path))
-              );
+              if (status.isGranted) {
+                await _controller.takePicture(path);
+                final f = File(path);
+                var bytes = await f.readAsBytes();
+                await f.writeAsBytes(bytes);
+              } else if (status.isDenied) {
+                await Permission.storage.request();
+                print('status.isDenied = ${status.isDenied}}');
+              } else if (status.isUndetermined) {
+                await Permission.storage.request();
+                print('status.isUndetermined = ${status.isUndetermined}}');
+              }
+              await Navigator.push(
+                  context, 
+                  MaterialPageRoute(builder: (context) => DisplayPicture(imagePath: path))
+                );
             } catch (e) {
               print(e);
             }
           },
         ),
-    );
-  }
+      );
+    }
 }
 
 class DisplayPicture extends StatelessWidget {
@@ -108,14 +125,6 @@ class DisplayPicture extends StatelessWidget {
         iconTheme: IconThemeData(
           color: Colors.black87
         ),
-        actions: <Widget>[
-          IconButton(
-            icon: Icon(Icons.add_a_photo), 
-            onPressed: () {
-              
-            }
-          )
-        ],
         title: Text(
           '${imagePath.substring(imagePath.lastIndexOf('/'))}',
           style: TextStyle(
@@ -134,37 +143,9 @@ class DisplayPicture extends StatelessWidget {
           child: FloatingActionButton.extended(
             backgroundColor: accentColor,
             onPressed: () async {
-                final savePath = join((await getApplicationDocumentsDirectory()).path, 'doc_${DateTime.now()}.pdf');
-                var file = File(imagePath);
-
-                final pdf = pw.Document();
-                final pdfImage = PdfImage.file(
-                  pdf.document,
-                  bytes: file.readAsBytesSync()
-                );
-
-                pdf.addPage(
-                  pw.Page(
-                    pageFormat: PdfPageFormat.a4,
-                    build: (pw.Context context) {
-                      return pw.Center(
-                        child: pw.Expanded(
-                          child: pw.Image(
-                            pdfImage,
-                            fit: pw.BoxFit.cover
-                          )
-                        )
-                      );
-                    }
-                  )
-                );
-
-                file = File(savePath);
-                await file.writeAsBytes(pdf.save());
-                print('file path : ${file.path}');
-                Navigator.pushNamedAndRemoveUntil(context, '/', (Route<dynamic> route) => false);
+              await Navigator.pushNamed(context, '/add_photo', arguments: Source.CAMERA);
             }, 
-            label: Text("Convert to PDF"),
+            label: Text("Continue"),
             clipBehavior: Clip.antiAlias,
           ),
         )

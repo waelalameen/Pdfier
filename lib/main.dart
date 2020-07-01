@@ -8,6 +8,8 @@ import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:permission_handler/permission_handler.dart';
+import 'package:sample_pdf/picture_selector.dart';
 import 'dart:io' show Directory, File, Platform;
 import 'package:sample_pdf/take_picture.dart';
 import 'package:sample_pdf/utils.dart';
@@ -32,6 +34,7 @@ class MyApp extends StatelessWidget {
         routes: {
           '/': (context) => MaterialHome(title: 'Photo to PDF'),
           '/camera': (context) => TakePicture(camera: firstCamera),
+          '/add_photo': (context) => PictrueSelector(), 
         },
         debugShowCheckedModeBanner: false,
         title: 'Photo to PDF',
@@ -74,52 +77,14 @@ class _MaterialHomeState extends State<MaterialHome> {
     final directory = Directory(path);
     final systemFiles = directory.listSync();
 
-    systemFiles.reversed.forEach((systemFile) {
+    systemFiles.forEach((systemFile) {
       var ext = systemFile.path.substring(systemFile.path.lastIndexOf('.'));
       if (ext == ".pdf") {
         final file = File(systemFile.path);
-        files.add(file);
+        files.insert(0, file);
       }
     });
     return files;
-  }
-
-  void convertToPdf(List<File> images) async {
-    final directory = await getApplicationDocumentsDirectory();
-    final savePath = join(directory.path, 'doc_${DateTime.now()}.pdf');
-    final pdf = pw.Document();
-    var file;
-
-    images.forEach((image) async {
-      final imagePath = image.path;
-      file = File(imagePath);
-
-      final pdfImage = PdfImage.file(
-        pdf.document,
-        bytes: file.readAsBytesSync()
-      );
-
-      pdf.addPage(
-        pw.Page(
-          pageFormat: PdfPageFormat.a4,
-          build: (pw.Context context) {
-            return pw.Center(
-              child: pw.Expanded(
-                child: pw.Image(
-                  pdfImage,
-                  fit: pw.BoxFit.cover
-                ),
-              )
-            );
-          }
-        )
-      );
-    });
-
-    file = File(savePath);
-    await file.writeAsBytes(pdf.save());
-    print('file path : ${file.path}');
-    setState(() {});
   }
 
   void shareFile(String fileName, File file) async {
@@ -232,13 +197,7 @@ class _MaterialHomeState extends State<MaterialHome> {
                             )
                           ),
                           onTap: () async {
-                            File file = await FilePicker.getFile(
-                              type: FileType.custom,
-                              allowedExtensions: ['jpg', 'jpeg', 'png']
-                            );
-                            List<File> files = List();
-                            files.add(file);
-                            convertToPdf(files);
+                            await openGallery(context);
                             Navigator.of(context, rootNavigator: true).pop('dialog');
                           },
                         ),
